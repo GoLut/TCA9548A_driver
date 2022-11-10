@@ -17,6 +17,7 @@ tca9548a_err_t tca9548a_check_connectivity(tca9548a_handle_t* platform){
         return TCA9548A_ERR_READ;
     }
 
+
     return TCA9548A_OK;
 }
 
@@ -85,7 +86,8 @@ tca9548a_err_t tca9548a_configure_channels(tca9548a_channel_t channels, tca9548a
     if(platform_err != 0){
         return TCA9548A_ERR_WRITE;
     }
-
+    //save the active channels
+    platform->current_active_channel = controlRegResult;
     return TCA9548A_OK;
 }
 
@@ -107,6 +109,8 @@ tca9548a_err_t tca9548a_reset(tca9548a_handle_t* platform){
     if(platform_err != 0){
         return TCA9548A_ERR_UNKNOWN;
     }
+    //no channel is selected
+    platform->current_active_channel = 0;
     return TCA9548A_OK;
 }
 
@@ -118,19 +122,6 @@ tca9548a_err_t tca9548a_reset(tca9548a_handle_t* platform){
  * @return TCA9548A_ERR_INIT_FAILED         -> initialization failed read the debug log. 
  */
 tca9548a_err_t tca9548a_init(tca9548a_handle_t* platform){
-    uint8_t res, id;
-
-    /* link interface function */
-    DRIVER_TCA9548A_LINK_INIT(platform, tca9548a_handle_t);
-    DRIVER_TCA9548A_LINK_GPIO_INIT(platform, tca9548a_interface_gpio_init)
-    DRIVER_TCA9548A_LINK_IIC_INIT(platform, tca9548a_interface_iic_init);
-    DRIVER_TCA9548A_LINK_IIC_DEINIT(platform, tca9548a_interface_iic_deinit);
-    DRIVER_TCA9548A_LINK_IIC_READ(platform, tca9548a_interface_iic_read);
-    DRIVER_TCA9548A_LINK_IIC_WRITE(platform, tca9548a_interface_iic_write);
-    DRIVER_TCA9548A_LINK_GPIO_SET(platform, tca9548a_interface_gpio_set);
-    DRIVER_TCA9548A_LINK_DELAY_US(platform, tca9548a_interface_delay_ms);
-    DRIVER_TCA9548A_LINK_DEBUG_PRINT(platform, tca9548a_interface_debug_print);
-
 
     //verify if all interface function pointers are defined.
     if (platform == NULL)                                                                  /* check handle */
@@ -183,7 +174,7 @@ tca9548a_err_t tca9548a_init(tca9548a_handle_t* platform){
         
         return TCA9548A_ERR_INIT_FAILED;                                                                        /* return error */
     }
-
+    platform->debug_print("tca9548a: sending iic command.\n");   
     //initialize the iic
     if (platform->iic_init() != 0)                                                         /* iic init */
     {
@@ -215,7 +206,6 @@ tca9548a_err_t tca9548a_init(tca9548a_handle_t* platform){
  */
 tca9548a_err_t tca9548a_deinit(tca9548a_handle_t *handle)
 {
-    uint8_t res, prev;
     
     if (handle == NULL)                                                                       /* check handle */
     {
